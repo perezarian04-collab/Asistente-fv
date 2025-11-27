@@ -4,7 +4,7 @@ import os
 
 # --- CONFIGURACIÓN DEL MODELO ---
 HF_MODEL = "google/flan-t5-large"
-HF_API_URL = f"https://api-inference.huggingface.co/models/{HF_MODEL}"
+HF_API_URL = "https://api-inference.huggingface.co/models/google/gemma-7b-it"
 HF_TOKEN = os.environ.get("HF_TOKEN")  # Token secreto guardado en Streamlit
 
 # --- PROMPT FIJO (ROL DEL ASISTENTE) ---
@@ -57,4 +57,5 @@ if st.button("Enviar"):
             respuesta = generar_respuesta(pregunta)
         st.write("### Respuesta del asistente:")
         st.write(respuesta)
+
 
