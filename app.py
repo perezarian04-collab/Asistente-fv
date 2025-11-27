@@ -2,45 +2,46 @@ import streamlit as st
 import requests
 import os
 
-# --- CONFIGURACIÓN DEL MODELO ---
-HF_MODEL = "google/gemma-2b-it"
-HF_API_URL = f"https://api-inference.huggingface.co/models/{HF_MODEL}"
-HF_TOKEN = os.environ.get("HF_TOKEN")  #
+# --- Configuración del modelo ---
+HF_TOKEN = os.environ.get("HF_TOKEN")   # Lo pones en Streamlit Secrets
+HF_MODEL = "google/gemma-2-2b-it"       # Modelo gratuito compatible
+API_URL = "https://router.huggingface.co/v1/chat/completions"
 
-# --- PROMPT FIJO (ROL DEL ASISTENTE) ---
+# --- Prompt del asistente ---
 SYSTEM_PROMPT = """
 Eres un asistente técnico especializado en instalaciones fotovoltaicas.
-Debes responder SIEMPRE como experto en placas solares.
-Explicas paso a paso, pides datos técnicos si faltan, y priorizas la seguridad eléctrica.
+Respondes SIEMPRE como experto en placas solares.
+Explicas paso a paso, das datos técnicos y priorizas la seguridad eléctrica.
 Respondes siempre en español.
 """
 
-# --- FUNCIÓN PARA HABLAR CON LA IA ---
-def generar_respuesta(mensaje_usuario):
-    if not HF_TOKEN:
-        return "? ERROR: Falta el token HF_TOKEN. Debes configurarlo en Streamlit ? Settings ? Secrets."
-
-    headers = {"Authorization": f"Bearer {HF_TOKEN}"}
-    payload = {
-        "inputs": SYSTEM_PROMPT + "\nUsuario: " + mensaje_usuario + "\nAsistente:",
-        "parameters": {"max_new_tokens": 300, "temperature": 0.2}
+# --- Función para llamar al modelo ---
+def generar_respuesta(mensaje):
+    headers = {
+        "Authorization": f"Bearer {HF_TOKEN}",
+        "Content-Type": "application/json"
     }
 
-    try:
-        response = requests.post(HF_API_URL, headers=headers, json=payload)
-        response.raise_for_status()
-        data = response.json()
+    body = {
+        "model": HF_MODEL,
+        "messages": [
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": mensaje}
+        ],
+        "temperature": 0.6
+    }
 
-        if isinstance(data, list) and "generated_text" in data[0]:
-            return data[0]["generated_text"]
-        return str(data)
+    response = requests.post(API_URL, headers=headers, json=body)
 
-    except Exception as e:
-        return f"? Error conectando con la IA: {e}"
+    if response.status_code != 200:
+        return f"❌ Error {response.status_code}: {response.text}"
 
-# --- INTERFAZ STREAMLIT ---
-st.title("? Asistente Técnico de Instalaciones Fotovoltaicas")
-st.write("Haz tu pregunta sobre placas solares y te responderé como técnico experto.")
+    data = response.json()
+    return data["choices"][0]["message"]["content"]
+
+# --- Interfaz Streamlit ---
+st.title("🔌 Asistente Técnico de Instalaciones Fotovoltaicas")
+st.write("Haz tu pregunta sobre placas solares y te respondo como técnico experto.")
 
 st.subheader("Ejemplos:")
 st.write("- ¿Cómo dimensionar un inversor para 8 paneles de 420W?")
@@ -51,13 +52,8 @@ pregunta = st.text_area("Escribe tu pregunta aquí:")
 
 if st.button("Enviar"):
     if pregunta.strip() == "":
-        st.warning("Por favor, escribe una pregunta.")
+        st.warning("Por favor escribe una pregunta.")
     else:
-        with st.spinner("Generando respuesta..."):
-            respuesta = generar_respuesta(pregunta)
-        st.write("### Respuesta del asistente:")
+        respuesta = generar_respuesta(pregunta)
+        st.write("### Respuesta del Asistente:")
         st.write(respuesta)
-
-
-
-
